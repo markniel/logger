@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	LevelTrace = slog.Level(-8)
-	LevelStats = slog.Level(-2)
+	LevelTrace  = slog.Level(-8)
+	LevelStats  = slog.Level(-2)
+	LevelNotice = slog.Level(2)
 )
 
 type Logger struct {
@@ -36,8 +37,9 @@ func NewLogger(logType string, dest *os.File, options *slog.HandlerOptions) *Log
 
 func NewLogOptions(level slog.Level, includeSource bool) *slog.HandlerOptions {
 	var LevelNames = map[slog.Leveler]string{
-		LevelTrace: "TRACE",
-		LevelStats: "STATS",
+		LevelTrace:  "TRACE",
+		LevelStats:  "STATS",
+		LevelNotice: "NOTICE",
 	}
 	logHandlerOpts := &slog.HandlerOptions{
 		AddSource: includeSource,
@@ -76,8 +78,12 @@ func (logger *Logger) Stats(args ...interface{}) {
 	}
 	var pcs [1]uintptr
 	runtime.Callers(2, pcs[:])
-	r := slog.NewRecord(time.Now(), LevelStats, fmt.Sprintf("%s", args[0]), pcs[0])
-	r.Add(args[1:]...)
+	function := runtime.FuncForPC(pcs[0]).Name()
+	functionElements := strings.Split(function, ".")
+	functionName := functionElements[len(functionElements)-1] + "()"
+	fmt.Printf("%s\n", functionName)
+	r := slog.NewRecord(time.Now(), LevelStats, fmt.Sprintf("%s", functionName), pcs[0])
+	r.Add(args[:]...)
 	_ = logger.Handler().Handle(context.Background(), r)
 }
 
@@ -88,6 +94,17 @@ func (logger *Logger) Trace(args ...interface{}) {
 	var pcs [1]uintptr
 	runtime.Callers(2, pcs[:])
 	r := slog.NewRecord(time.Now(), LevelTrace, fmt.Sprintf("%s", args[0]), pcs[0])
+	r.Add(args[1:]...)
+	_ = logger.Handler().Handle(context.Background(), r)
+}
+
+func (logger *Logger) Notice(args ...interface{}) {
+	if !logger.Enabled(context.Background(), LevelNotice) {
+		return
+	}
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:])
+	r := slog.NewRecord(time.Now(), LevelNotice, fmt.Sprintf("%s", args[0]), pcs[0])
 	r.Add(args[1:]...)
 	_ = logger.Handler().Handle(context.Background(), r)
 }
