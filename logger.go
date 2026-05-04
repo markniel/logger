@@ -78,12 +78,8 @@ func (logger *Logger) Stats(args ...interface{}) {
 	}
 	var pcs [1]uintptr
 	runtime.Callers(2, pcs[:])
-	function := runtime.FuncForPC(pcs[0]).Name()
-	functionElements := strings.Split(function, ".")
-	functionName := functionElements[len(functionElements)-1] + "()"
-	fmt.Printf("%s\n", functionName)
-	r := slog.NewRecord(time.Now(), LevelStats, fmt.Sprintf("%s", functionName), pcs[0])
-	r.Add(args[:]...)
+	r := slog.NewRecord(time.Now(), LevelStats, fmt.Sprintf("%s", args[0]), pcs[0])
+	r.Add(args[1:]...)
 	_ = logger.Handler().Handle(context.Background(), r)
 }
 
